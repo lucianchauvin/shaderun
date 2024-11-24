@@ -1,6 +1,7 @@
 # shaderun
-A tool to run `glsl` shaders aimed to streamline the process of creating and
-running them. Somewhat compatiable and aimed to replicate [Shadertoy](https://www.shadertoy.com/).
+A tool to interact with `glsl` shaders aimed to streamline the process of
+creating and running them. Somewhat compatiable with work done using, and aimed
+to replicate, [Shadertoy](https://www.shadertoy.com/).
 
 ## compile
 `make`
