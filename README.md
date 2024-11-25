@@ -7,7 +7,7 @@ to replicate, [Shadertoy](https://www.shadertoy.com/).
 `make`
 
 ## running
-`Usage: ./shaderun <fragment_path> [window_width] [window_height]`
+Usage: ./shaderun <fragment_path> [window_width] [window_height] [-o <output_file>]
 
 ## WIP
 Not sure if the window width and height work yet, my window manager doesnt let

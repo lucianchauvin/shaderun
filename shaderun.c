@@ -122,22 +122,49 @@ void setup_quad() {
     glBindVertexArray(0);
 }
 
+void capture_frame(int width, int height, FILE* file) {
+    size_t image_size = width * height * 3;  // RGB format
+    unsigned char* pixels = (unsigned char*)malloc(image_size);
+    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+
+    fwrite(pixels, 1, image_size, file);
+
+    free(pixels);
+}
+
+FILE* start_ffmpeg(int width, int height, const char* filename) {
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd),
+             "ffmpeg -y -f rawvideo -pixel_format rgb24 -video_size %dx%d -r 60 -i - -c:v libx264 -pix_fmt yuv420p %s",
+             width, height, filename);
+
+    FILE* pipe = popen(cmd, "w");
+    assert(pipe);
+    return pipe;
+}
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <fragment_path> [window_width] [window_height]\n", argv[0]);
+        fprintf(stderr, "Usage: %s <fragment_path> [window_width] [window_height] [-o <output_file>]\n", argv[0]);
         return 1;
     }
 
+    const char* output_file = NULL;
     const char* shader_path = argv[1];
     int w_width = 0;
     int w_height = 0;
 
-    if (argc >= 4) {
-        w_width = atoi(argv[2]);
-        w_height = atoi(argv[3]);
-    }
+    if (strcmp(argv[argc - 2], "-o") == 0)
+        output_file = argv[argc - 1];
 
     GLFWwindow* win = init_win(w_width, w_height);
+
+    FILE* ffmpeg_pipe = NULL;
+    if (output_file) {
+        int width, height;
+        glfwGetFramebufferSize(win, &width, &height);
+        ffmpeg_pipe = start_ffmpeg(width, height, output_file);
+    }
 
     // load vertex source
     const char* vert_src = 
@@ -166,6 +193,7 @@ int main(int argc, char* argv[]) {
     float prev_time = glfwGetTime();
     int f = 0;
     while (!glfwWindowShouldClose(win)) {
+
         glClear(GL_COLOR_BUFFER_BIT);
 
         int width, height;
@@ -205,10 +233,16 @@ int main(int argc, char* argv[]) {
         glBindVertexArray(1);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
+        if (ffmpeg_pipe)
+            capture_frame(width, height, ffmpeg_pipe);
+
         glfwSwapBuffers(win);
         glfwPollEvents();
         f++;
     }
+
+    if (ffmpeg_pipe)
+        pclose(ffmpeg_pipe);
 
     glfwTerminate();
     return 0;
