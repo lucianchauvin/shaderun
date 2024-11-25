@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <time.h>
+
+#define TARGET_FPS 60
+#define TARGET_FRAME_TIME (1.0f / TARGET_FPS)
 
 GLFWwindow* init_win(int width, int height) {
     assert(glfwInit());
@@ -192,6 +196,7 @@ int main(int argc, char* argv[]) {
 
     float prev_time = glfwGetTime();
     int f = 0;
+    double last_frame_time = glfwGetTime();
     while (!glfwWindowShouldClose(win)) {
 
         glClear(GL_COLOR_BUFFER_BIT);
@@ -204,8 +209,16 @@ int main(int argc, char* argv[]) {
 
         // set uniform values
         float cur_time = glfwGetTime();
+        double frame_time = cur_time - last_frame_time;
         float dtime = cur_time - prev_time;
         prev_time = cur_time;
+
+        if (frame_time < TARGET_FRAME_TIME) {
+            double sleep_time = TARGET_FRAME_TIME - frame_time;
+            glfwWaitEventsTimeout(sleep_time);
+        }
+
+        last_frame_time = glfwGetTime();
 
         if (i_time != -1) glUniform1f(i_time, cur_time);
         if (i_res != -1) glUniform3f(i_res, (float)width, (float)height, 1.0f); 
