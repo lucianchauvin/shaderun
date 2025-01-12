@@ -162,6 +162,7 @@ int main(int argc, char* argv[]) {
         output_file = argv[argc - 1];
 
     GLFWwindow* win = init_win(w_width, w_height);
+    glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 
     FILE* ffmpeg_pipe = NULL;
     if (output_file) {
