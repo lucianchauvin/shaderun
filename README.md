@@ -3,6 +3,9 @@ A tool to interact with `glsl` shaders aimed to streamline the process of
 creating and running them. Somewhat compatiable with work done using, and aimed
 to replicate, [Shadertoy](https://www.shadertoy.com/).
 
+## dependencies
+This project requires [GLEW](https://glew.sourceforge.net/) and [GLFW](https://www.glfw.org/).
+
 ## compile
 `make`
 
