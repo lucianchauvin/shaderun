@@ -1,7 +1,11 @@
 CC=gcc
-CFLAGS=-fsanitize=address -fno-strict-aliasing -fno-stack-protector -fpie
+CFLAGS=-fsanitize=address
 LDFLAGS=-lGL -lGLEW -lglfw
 OBJS=shaderun.o
+TARGET=shaderun
 
-shaderun: $(OBJS)
+$(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+clean:
+	rm -f $(OBJS) $(TARGET)
