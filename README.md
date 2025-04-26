@@ -11,9 +11,8 @@ This project requires [GLEW](https://glew.sourceforge.net/) and [GLFW](https://w
 ## running
 `Usage: shaderun <fragment_path> [window_width] [window_height] [-o <output_file>]`
 
-## WIP
-- Not sure if the window width and height work yet, my window manager doesnt let
-  things not be in fullscreen or like maximized to fill a space.
+## to do/work in progress
+- Not sure if the window width and height work yet, would need to mess with my window manager
 - Would like to get exporting through ffmpeg working
 
 
