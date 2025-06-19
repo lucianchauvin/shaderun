@@ -14,6 +14,8 @@ This project requires [GLEW](https://glew.sourceforge.net/) and [GLFW](https://w
 ## to do/work in progress
 - Not sure if the window width and height work yet, would need to mess with my window manager
 - Would like to get exporting through ffmpeg working
+- - brian (well know graphics man) told me to just sequentially render to texture each frame for
+    ffmpeg [here](https://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/)
 
 
 ### credits
