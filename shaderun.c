@@ -40,19 +40,19 @@ void setup_quad() {
     glBindVertexArray(0);
 }
 
-char *gen_frag_src(const char *frag_path) {
-    FILE *f = fopen(frag_path, "r");
+char *gen_frag_src(const char *path) {
+    FILE *f = fopen(path, "r");
 
     fseek(f, 0, SEEK_END);
-    long length = ftell(f);
+    long len = ftell(f);
     rewind(f);
 
-    char *frag_src = (char*)malloc(length + 1);
-    frag_src[length] = '\0';
-    fread(frag_src, 1, length, f);
+    char *frag_src = (char*)malloc(len + 1);
+    frag_src[len] = '\0';
+    fread(frag_src, 1, len, f);
     fclose(f);
 
-    char *full = (char*)malloc(strlen(frag_preamble) + length + 1);
+    char *full = (char*)malloc(strlen(frag_preamble) + len + 1);
     strcpy(full, frag_preamble);
     strcat(full, frag_src);
 
@@ -96,42 +96,65 @@ GLuint create_prog(const char *vrtx_src, const char *frag_src) {
     return prog;
 }
 
+void load_prog(int signo) {
+    if (signo == SIGUSR1) printf("recompiling %s\n", path);
+    char *frag_src = gen_frag_src(path);
+    glDeleteProgram(prog);
+    prog = create_prog(vrtx_src, frag_src);
+    free(frag_src);
+    i_res      = glGetUniformLocation(prog, "iResolution");
+    i_time     = glGetUniformLocation(prog, "iTime");
+    i_dtime    = glGetUniformLocation(prog, "iTimeDelta");
+    i_frame    = glGetUniformLocation(prog, "iFrame");
+    i_mouse    = glGetUniformLocation(prog, "iMouse");
+    i_keyinput = glGetUniformLocation(prog, "iKeyInput");
+
+    f = 0;
+    prev_time = 0.0;
+    glfwSetTime(0.0);
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <fragment_path> [window_width] [window_height]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    const char *frag_path = argv[1];
-    int w_width = 0;
-    int w_height = 0;
-
-    if (access(frag_path, F_OK)) {
+    // check frag path exists
+    path = argv[1];
+    if (access(path, F_OK)) {
         perror(NULL);
         exit(EXIT_FAILURE);
     }
 
+    int w_width, w_height;
     GLFWwindow *win = init_win(w_width, w_height);
     setup_quad();
 
-    char *frag_src = gen_frag_src(frag_path);
-    GLuint prog = create_prog(vrtx_src, frag_src);
-    free(frag_src);
+    pid_t pid;
+    if ((pid = fork()) == 0){
+        int fd, wd;
+        if ((fd = inotify_init()) < 0)
+            perror("inotify_init");
 
-    GLint i_res = glGetUniformLocation(prog, "iResolution");
-    GLint i_time = glGetUniformLocation(prog, "iTime");
-    GLint i_dtime = glGetUniformLocation(prog, "iTimeDelta");
-    GLint i_frame = glGetUniformLocation(prog, "iFrame");
-    GLint i_mouse = glGetUniformLocation(prog, "iMouse");
-    GLint i_keyinput = glGetUniformLocation(prog, "iKeyInput");
+        wd = inotify_add_watch(fd, path, IN_MODIFY);
+        if (wd < 0)
+            perror("inotify_add_watch");
 
-    int f = 0;
-    double prev_time = 0.0;
-    double cur_time, dtime;
-    double mouse_pos[2];
-    float mouse_vec[4];
+        while (1) {
+            if(read(fd, NULL, sizeof(struct inotify_event) != -1))
+                kill(pid, SIGUSR1);
+        }
+    }
 
-    glfwSetTime(0.0);
+    // setup reocmpile handler
+    struct sigaction sa;
+    sa.sa_handler = load_prog;
+    sigemptyset(&sa.sa_mask);
+    if (sigaction(SIGUSR1, &sa, NULL) == -1)
+        perror("sigaction");
+
+    load_prog(0);
     while (!glfwWindowShouldClose(win)) {
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -156,6 +179,8 @@ int main(int argc, char *argv[]) {
         mouse_vec[1] = w_height - mouse_pos[1];
         glUniform4fv(i_mouse, 1, mouse_vec);  
 
+        // TODO: implement i_keyinput
+
         // not sure if this is working
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, 0);
@@ -167,7 +192,9 @@ int main(int argc, char *argv[]) {
         glfwPollEvents();
         f++;
     }
-
     glfwTerminate();
+
+    kill(pid, SIGKILL);
+    wait(NULL);
     exit(EXIT_SUCCESS);
 }

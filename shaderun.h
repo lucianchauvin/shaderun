@@ -8,6 +8,16 @@
 #include <time.h>
 #include <sys/inotify.h>
 #include <limits.h>
+#include <poll.h>
+#include <signal.h>
+#include <sys/wait.h>
+
+const char *path;
+GLuint prog;
+GLint i_res, i_time, i_dtime, i_frame, i_mouse, i_keyinput;
+int f;
+double prev_time, cur_time, dtime, mouse_pos[2];
+float mouse_vec[4];
 
 const char *vrtx_src = 
     "#version 460 core\n"
@@ -37,6 +47,7 @@ const char *frag_preamble =
 
 GLFWwindow *init_win(int width, int height);
 void setup_quad();
-char *read_shader(const char *frag_path);
+char *read_shader(const char *path);
 GLuint compile_shader(const char *source, GLenum shader_type);
 GLuint create_prog(const char *vrtx_src, const char *frag_src);
+void load_prog(int signo);
