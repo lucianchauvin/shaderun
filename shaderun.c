@@ -13,6 +13,7 @@ GLFWwindow *init_win(int width, int height) {
     assert(win);
 
     glfwMakeContextCurrent(win);
+    glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
     assert(glewInit() == GLEW_OK);
     return win;
 }
@@ -71,7 +72,7 @@ GLuint compile_shader(const char *source, GLenum type) {
         char infoLog[512];
         glGetShaderInfoLog(shader, sizeof(infoLog), NULL, infoLog);
         fprintf(stderr, "Shader Compilation Error: %s\n", infoLog);
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
     return shader;
@@ -80,6 +81,7 @@ GLuint compile_shader(const char *source, GLenum type) {
 GLuint create_prog(const char *vrtx_src, const char *frag_src) {
     GLuint vrtx = compile_shader(vrtx_src, GL_VERTEX_SHADER);
     GLuint frag = compile_shader(frag_src, GL_FRAGMENT_SHADER);
+    if (vrtx == -1 || frag == -1) return -1;
 
     GLuint prog = glCreateProgram();
     glAttachShader(prog, vrtx);
@@ -128,31 +130,47 @@ int main(int argc, char *argv[]) {
     }
 
     int w_width, w_height;
+    if (argc >= 4){
+        w_width = atoi(argv[2]);
+        w_height = atoi(argv[2]);
+    }
+    
     GLFWwindow *win = init_win(w_width, w_height);
     setup_quad();
 
     pid_t pid;
-    if ((pid = fork()) == 0){
+    if ((pid = fork()) == 0) {
         int fd, wd;
-        if ((fd = inotify_init()) < 0)
+        if ((fd = inotify_init()) == -1) {
             perror("inotify_init");
-
-        wd = inotify_add_watch(fd, path, IN_MODIFY);
-        if (wd < 0)
-            perror("inotify_add_watch");
-
-        while (1) {
-            if(read(fd, NULL, sizeof(struct inotify_event) != -1))
-                kill(pid, SIGUSR1);
+            exit(EXIT_FAILURE);
         }
-    }
+
+        char buf[BUF_LEN];
+        while (1) {
+            wd = inotify_add_watch(fd, path, IN_MODIFY);
+            if (wd < 0) {
+                perror("inotify_add_watch");
+                exit(EXIT_FAILURE);
+            }
+            if(read(fd, buf, BUF_LEN) == -1){
+                perror("read");
+                exit(EXIT_FAILURE);
+            } else
+                kill(getppid(), SIGUSR1);
+            inotify_rm_watch(fd, wd);
+        }
+    } else if (pid < 0)
+        perror("fork");
 
     // setup reocmpile handler
     struct sigaction sa;
     sa.sa_handler = load_prog;
     sigemptyset(&sa.sa_mask);
-    if (sigaction(SIGUSR1, &sa, NULL) == -1)
+    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
         perror("sigaction");
+        exit(EXIT_FAILURE);
+    }
 
     load_prog(0);
     while (!glfwWindowShouldClose(win)) {

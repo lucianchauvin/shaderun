@@ -12,6 +12,9 @@
 #include <signal.h>
 #include <sys/wait.h>
 
+#define EVENT_SIZE  (sizeof(struct inotify_event))
+#define BUF_LEN     (1024*(EVENT_SIZE + 16))
+
 const char *path;
 GLuint prog;
 GLint i_res, i_time, i_dtime, i_frame, i_mouse, i_keyinput;
